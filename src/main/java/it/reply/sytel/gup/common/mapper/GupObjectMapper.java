@@ -151,6 +151,25 @@ public class GupObjectMapper {
 		return value;
 	}
 
+	public String getValueFromXMLWithNestedValue(String xmlMessage, String[] keys) throws XPathExpressionException {
+		String value = null;
+
+		if (xmlMessage != null && keys != null && keys.length >= 1) {
+			InputSource inputXML = new InputSource( new StringReader( xmlMessage ));
+			XPath xPath = XPathFactory.newInstance().newXPath();
+			String evaluateString = "";
+			for (String key:keys) {
+				evaluateString += "/*[local-name()='"+key+"']";
+			}	
+			value = xPath.evaluate(evaluateString, inputXML);
+		}
+
+		if ("".equalsIgnoreCase(value))
+			return null;
+
+		return value;
+	}
+	
 	public String create_md5_from_String(String string_to_md5) throws NoSuchAlgorithmException {
 		String string_hash = "";
 		MessageDigest md;
