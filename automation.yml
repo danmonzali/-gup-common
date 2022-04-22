@@ -38,9 +38,9 @@ quality:
     active_gate: false
 
 security:
-    skip: true
+    skip: false
     srsca:
-      skip: false
+      skip: true
       configuration:
         scan:
           scan_path: "**/target/dependency/*"
