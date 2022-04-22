@@ -20,7 +20,7 @@ unit_test:
   tag:
     mvn: test
 quality:
-  skip: true
+  skip: false
   sonarqube:
     skip: false
     properties: |
