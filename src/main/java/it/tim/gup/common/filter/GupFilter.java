@@ -4,7 +4,6 @@ import java.io.IOException;
 
 import javax.servlet.Filter;
 import javax.servlet.FilterChain;
-import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
 import javax.servlet.ServletRequest;
 import javax.servlet.ServletResponse;
@@ -47,7 +46,7 @@ public abstract class GupFilter implements Filter {
 			filterChain.doFilter(request, response);
 			
 		} catch (Throwable e) {
-			logger.error("doFilter - ERRORE " + e.getMessage().replaceAll("[\n\r]", ""));
+			logger.error("doFilter - ERRORE ", e);
 			throw e;
 		} finally {
 			ThreadContext.clearAll();
