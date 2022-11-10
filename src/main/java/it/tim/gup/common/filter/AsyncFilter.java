@@ -40,6 +40,7 @@ public abstract class AsyncFilter implements Filter {
 			MDC.put("gupSource", httpServletRequest.getHeader("sourceSystem"));
 			MDC.put("gupSourceChannel", httpServletRequest.getHeader("channel"));
 			MDC.put("gupId", httpServletRequest.getHeader("businessID"));
+			MDC.put("gupCodServiceHxx", httpServletRequest.getHeader("codiceServizioHxx"));
 			ThreadContext.put("gupApplicationComponent", getGupApplicationComponent());
 			ThreadContext.put("gupEventType", getGupEventType());
 
