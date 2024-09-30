@@ -5,7 +5,7 @@
 
 	<groupId>it.tim.gup</groupId>
 	<artifactId>gup-common</artifactId>
-	<version>0.0.5.alfa</version>
+	<version>0.0.7.alfa</version>
 	<packaging>jar</packaging>
 
 	<parent>
