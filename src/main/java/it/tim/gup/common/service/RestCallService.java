@@ -50,9 +50,16 @@ public abstract class RestCallService {
 
 	@Value("${https.mutual-auth.truststore.path: /path/trustore}")
 	private String truststorePath;
-
-	@Value("${https.mutual-auth.truststore.password: trustore_password}")
+	
+	@Value("${https.mutual-auth.truststore.password: truststore_password}")
 	private String truststorePassword;
+
+	@Value("${https.truststore.instance: PKCS12}")
+	private String truststoreInstance;
+	
+	@Value("${https.keystore.instance: JKS}")
+	private String keystoreInstance;
+
 
 
 	public String getHttpHeaderDate() {
@@ -203,11 +210,11 @@ public abstract class RestCallService {
 			if (mutua) {
 				try {
 					// Carica il keystore (certificato client e chiave privata)
-					KeyStore keyStore = KeyStore.getInstance("PKCS12");
+					KeyStore keyStore = KeyStore.getInstance(truststoreInstance);
 					keyStore.load(new FileInputStream(new File(keystorePath)), keystorePassword.toCharArray());
 
 					// Carica il truststore (certificati server attendibili)
-					KeyStore trustStore = KeyStore.getInstance("JKS");
+					KeyStore trustStore = KeyStore.getInstance(keystoreInstance);
 					trustStore.load(new FileInputStream(new File(truststorePath)), truststorePassword.toCharArray());
 
 					// Configura il contesto SSL con il keystore e il truststore
