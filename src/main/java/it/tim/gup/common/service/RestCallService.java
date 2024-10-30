@@ -203,7 +203,7 @@ public abstract class RestCallService {
 			if (mutua) {
 				try {
 					// Carica il keystore (certificato client e chiave privata)
-					KeyStore keyStore = KeyStore.getInstance("JKS");
+					KeyStore keyStore = KeyStore.getInstance("PKCS12");
 					keyStore.load(new FileInputStream(new File(keystorePath)), keystorePassword.toCharArray());
 
 					// Carica il truststore (certificati server attendibili)
