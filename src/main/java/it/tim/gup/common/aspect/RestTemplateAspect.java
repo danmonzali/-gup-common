@@ -13,13 +13,14 @@ import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.client.HttpClients;
 import org.apache.http.ssl.SSLContextBuilder;
+import org.apache.logging.log4j.LogManager;
+import org.apache.logging.log4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
 import org.aspectj.lang.annotation.Around;
 import org.aspectj.lang.annotation.Aspect;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
-import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
@@ -32,66 +33,68 @@ public class RestTemplateAspect {
 	@Autowired
 	private BeanMutua beanMutua;
 
-	@Value("${https.truststore.instance: PKCS12}")
+	@Value("${https.truststore.instance:JKS}")
 	private String truststoreInstance;
 
-	@Value("${https.keystore.instance: JKS}")
+	@Value("${https.keystore.instance:PKCS12}")
 	private String keystoreInstance;
 
-	@Value("${https.mutual-auth.enabled: false}")
-	private boolean mutualAuthEnabled;
-
-	@Value("${https.mutual-auth.keystore.path: /path/keystore}")
+	@Value("${https.mutual-auth.keystore.path:/path/keystore}")
 	private String keystorePath;
 
-	@Value("${https.mutual-auth.keystore.password: keystore_password}")
+	@Value("${https.mutual-auth.keystore.password:keystore_password}")
 	private String keystorePassword;
 
-	@Value("${https.mutual-auth.truststore.path: /path/trustore}")
+	@Value("${https.mutual-auth.truststore.path:/path/trustore}")
 	private String truststorePath;
 
-	@Value("${https.mutual-auth.truststore.password: trustore_password}")
+	@Value("${https.mutual-auth.truststore.password:trustore_password}")
 	private String truststorePassword;
-	
+
 	@Autowired
 	private ApplicationContext applicationContext;
+
+	private static final Logger logger = LogManager.getLogger(RestTemplateAspect.class);
+
 
 	@Around("execution(* org.springframework.web.client.RestTemplate.exchange(..))")
 	public Object aroundExchange(ProceedingJoinPoint joinPoint) throws Throwable {
 		// Prima di chiamare il metodo exchange
 		boolean makeMutua = false;
 		String url = (String) joinPoint.getArgs()[0];
-		
+
 		HttpComponentsClientHttpRequestFactory requestFactory  = ((HttpComponentsClientHttpRequestFactory)((RestTemplate) joinPoint.getThis()).getRequestFactory());
-		
-		for (int i = 0; i < beanMutua.getUrl().length - 1; i++) {
-			String s = beanMutua.getUrl()[i];
-			if (url.contains(s) && beanMutua.getAccept()[i] == true) {
-				makeMutua = true;
-				((RestTemplate) joinPoint.getThis()).setRequestFactory(makeCallMutua(requestFactory));
-				break;
+
+		if (beanMutua.getUrl()!=null) {
+			for (int i = 0; i < beanMutua.getUrl().length; i++) {
+				String s = beanMutua.getUrl()[i];
+				if (url.contains(s) && beanMutua.getAccept()[i] == true) {
+					makeMutua = true;
+					((RestTemplate) joinPoint.getThis()).setRequestFactory(makeCallMutua(requestFactory));
+					break;
+				}
 			}
 		}
 		if (!makeMutua && url.toUpperCase().startsWith("HTTPS")) {
 			((RestTemplate) joinPoint.getThis()).setRequestFactory(makeCallNonMutua(requestFactory,url));
-		} else {
+		} else if(!makeMutua){
 			RestTemplate rtDefault = (RestTemplate) applicationContext.getBean("restTemplateDefault");
 			((RestTemplate) joinPoint.getThis()).setRequestFactory(rtDefault.getRequestFactory());
 		}
 		// Esegui il metodo exchange()
 		Object result = joinPoint.proceed();
 
-		// Dopo la chiamata exchange
-		if (result instanceof ResponseEntity) {
-			ResponseEntity<?> response = (ResponseEntity<?>) result;
-			System.out.println("Risposta ricevuta: " + response.getStatusCode());
-		}
+		//		// Dopo la chiamata exchange
+		//		if (result instanceof ResponseEntity) {
+		//			ResponseEntity<?> response = (ResponseEntity<?>) result;
+		//			System.out.println("Risposta ricevuta: " + response.getStatusCode());
+		//		}
 
 		return result;
 	}
 
 	public HttpComponentsClientHttpRequestFactory makeCallNonMutua(HttpComponentsClientHttpRequestFactory requestFactory,String url) {
-//		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
+		//		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
 
 		CloseableHttpClient httpClient = HttpClients.custom().setSSLHostnameVerifier(new NoopHostnameVerifier())
 				.build();
@@ -102,7 +105,7 @@ public class RestTemplateAspect {
 
 	public HttpComponentsClientHttpRequestFactory makeCallMutua(HttpComponentsClientHttpRequestFactory requestFactory) {
 
-//		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
+		//		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
 
 		CloseableHttpClient httpClient = HttpClients.custom().setSSLHostnameVerifier(new NoopHostnameVerifier())
 				.build();
@@ -119,7 +122,7 @@ public class RestTemplateAspect {
 
 			// Configura il contesto SSL con il keystore e il truststore
 			SSLContext sslContext = SSLContextBuilder.create().loadKeyMaterial(keyStore, keystorePassword.toCharArray()) // client
-																															// cert
+					// cert
 					.loadTrustMaterial(trustStore, new TrustSelfSignedStrategy()) // server cert
 					.build();
 
@@ -133,7 +136,7 @@ public class RestTemplateAspect {
 
 			return requestFactory;
 		} catch (Throwable t) {
-//					getLogger().warn("ATTENZIONE non è stato possibile abilitare la mutua: ", t);
+			logger.warn("ATTENZIONE non è stato possibile abilitare la mutua: ", t);
 		}
 
 		return null;
