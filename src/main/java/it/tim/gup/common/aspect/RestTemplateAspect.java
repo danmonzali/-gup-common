@@ -7,12 +7,18 @@ import java.security.KeyStore;
 
 import javax.net.ssl.SSLContext;
 
-import org.apache.http.conn.ssl.NoopHostnameVerifier;
-import org.apache.http.conn.ssl.SSLConnectionSocketFactory;
-import org.apache.http.conn.ssl.TrustSelfSignedStrategy;
-import org.apache.http.impl.client.CloseableHttpClient;
-import org.apache.http.impl.client.HttpClients;
-import org.apache.http.ssl.SSLContextBuilder;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.client5.http.impl.io.BasicHttpClientConnectionManager;
+import org.apache.hc.client5.http.socket.ConnectionSocketFactory;
+import org.apache.hc.client5.http.socket.PlainConnectionSocketFactory;
+import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
+import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
+import org.apache.hc.client5.http.ssl.TrustSelfSignedStrategy;
+import org.apache.hc.core5.http.config.Registry;
+import org.apache.hc.core5.http.config.RegistryBuilder;
+import org.apache.hc.core5.ssl.SSLContextBuilder;
 import org.apache.logging.log4j.LogManager;
 import org.apache.logging.log4j.Logger;
 import org.aspectj.lang.ProceedingJoinPoint;
@@ -96,9 +102,31 @@ public class RestTemplateAspect {
 	public HttpComponentsClientHttpRequestFactory makeCallNonMutua(HttpComponentsClientHttpRequestFactory requestFactory,String url) {
 		//		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
 
-		CloseableHttpClient httpClient = HttpClients.custom().setSSLHostnameVerifier(new NoopHostnameVerifier())
-				.build();
+		try {
+		SSLContext sslContext = SSLContextBuilder.create().build();
+		SSLConnectionSocketFactory sslsf = 
+		        new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
+		
+		
+		Registry<ConnectionSocketFactory> socketFactoryRegistry = 
+		        RegistryBuilder.<ConnectionSocketFactory> create()
+		        .register("https", sslsf)
+		        .register("http", new PlainConnectionSocketFactory())
+		        .build();
+		
+		BasicHttpClientConnectionManager connectionManager =
+		        new BasicHttpClientConnectionManager(socketFactoryRegistry);
+		
+		CloseableHttpClient httpClient = HttpClients.custom()
+		        .setConnectionManager(connectionManager)
+		        .build();
+
+
 		requestFactory.setHttpClient(httpClient);
+
+	    } catch (Throwable t) {
+			logger.warn("ATTENZIONE qualcosa è andato storto: ", t);
+		}
 
 		return requestFactory;
 	}
@@ -106,11 +134,6 @@ public class RestTemplateAspect {
 	public HttpComponentsClientHttpRequestFactory makeCallMutua(HttpComponentsClientHttpRequestFactory requestFactory) {
 
 		//		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
-
-		CloseableHttpClient httpClient = HttpClients.custom().setSSLHostnameVerifier(new NoopHostnameVerifier())
-				.build();
-		requestFactory.setHttpClient(httpClient);
-
 		try {
 			// Carica il keystore (certificato client e chiave privata)
 			KeyStore keyStore = KeyStore.getInstance(keystoreInstance);
@@ -126,13 +149,27 @@ public class RestTemplateAspect {
 					.loadTrustMaterial(trustStore, new TrustSelfSignedStrategy()) // server cert
 					.build();
 
-			SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(sslContext,
-					NoopHostnameVerifier.INSTANCE);
+			
+			SSLConnectionSocketFactory sslsf = 
+			        new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
+			
+			
+			Registry<ConnectionSocketFactory> socketFactoryRegistry = 
+			        RegistryBuilder.<ConnectionSocketFactory> create()
+			        .register("https", sslsf)
+			        .register("http", new PlainConnectionSocketFactory())
+			        .build();
+			
+			BasicHttpClientConnectionManager connectionManager =
+			        new BasicHttpClientConnectionManager(socketFactoryRegistry);
 
-			// Crea un HttpClient che utilizza questa socket factory
-			CloseableHttpClient httpClientMutua = HttpClients.custom().setSSLSocketFactory(socketFactory).build();
-
-			requestFactory.setHttpClient(httpClientMutua);
+			
+			
+			CloseableHttpClient httpClient = HttpClients.custom()
+			        .setConnectionManager(connectionManager)
+			        .build();
+			
+			requestFactory.setHttpClient(httpClient);
 
 			return requestFactory;
 		} catch (Throwable t) {

@@ -216,13 +216,13 @@ public abstract class RestCallService {
 
 	public RestTemplate getRestTemplate(String protocol, int timeout) {
 		RestTemplate rt = (RestTemplate) applicationContext.getBean("restTemplate");
-		((HttpComponentsClientHttpRequestFactory)rt.getRequestFactory()).setReadTimeout(timeout);
+		((HttpComponentsClientHttpRequestFactory)rt.getRequestFactory()).setConnectTimeout(timeout);
 		((HttpComponentsClientHttpRequestFactory)rt.getRequestFactory()).setConnectTimeout(timeout);
 		
 		
 		
 		RestTemplate rtDefault = (RestTemplate) applicationContext.getBean("restTemplateDefault");
-		((HttpComponentsClientHttpRequestFactory)rtDefault.getRequestFactory()).setReadTimeout(timeout);
+		((HttpComponentsClientHttpRequestFactory)rtDefault.getRequestFactory()).setConnectTimeout(timeout);
 		((HttpComponentsClientHttpRequestFactory)rtDefault.getRequestFactory()).setConnectTimeout(timeout);
 		return rt;
 //		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();

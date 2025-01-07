@@ -5,21 +5,21 @@
 	<modelVersion>4.0.0</modelVersion>
 
 	<groupId>it.tim.gup</groupId>
-	<artifactId>gup-common</artifactId>
-	<version>0.0.7.alfa</version>
+        <artifactId>gup-common-17</artifactId>
+	<version>0.0.1</version>
 	<packaging>jar</packaging>
 
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>2.7.0</version>
+		<version>3.2.6</version>
 	</parent>
 
 	<properties>
 		<project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 		<project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-		<java.version>1.8</java.version>
-		<log4j2.version>2.17.1</log4j2.version>
+		<java.version>17</java.version>
+		<log4j2.version>2.20.0</log4j2.version>
 	</properties>
 
 	<dependencies>
@@ -44,8 +44,8 @@
 		</dependency>
 
 		<dependency>
-			<groupId>org.apache.httpcomponents</groupId>
-			<artifactId>httpclient</artifactId>
+			<groupId>org.apache.httpcomponents.client5</groupId>
+			<artifactId>httpclient5</artifactId>
 		</dependency>
 
 		<dependency>
@@ -55,19 +55,41 @@
 		<dependency>
 			<groupId>com.fasterxml.jackson.dataformat</groupId>
 			<artifactId>jackson-dataformat-xml</artifactId>
-			<version>2.9.8</version>
 		</dependency>
 		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.9.8</version>
 		</dependency>
 		<dependency>
 			<groupId>com.mikesamuel</groupId>
 			<artifactId>json-sanitizer</artifactId>
 			<version>1.2.0</version>
 		</dependency>
+		<dependency>
+			<groupId>com.fasterxml.jackson.core</groupId>
+			<artifactId>jackson-databind</artifactId>
+			<version>2.15.2</version> <!-- Assicurati che la versione sia
+			compatibile -->
+		</dependency>
 
+		<!-- Jackson DataType JSR310 for Java 8 Time API support -->
+		<dependency>
+			<groupId>com.fasterxml.jackson.datatype</groupId>
+			<artifactId>jackson-datatype-jsr310</artifactId>
+			<version>2.15.2</version> <!-- Assicurati che la versione sia
+			compatibile -->
+		</dependency>
+		<dependency>
+			<groupId>jakarta.xml.bind</groupId>
+			<artifactId>jakarta.xml.bind-api</artifactId>
+		</dependency>
+
+		<!-- Implementazione di JAXB (come JAXB Runtime) -->
+		<dependency>
+			<groupId>org.glassfish.jaxb</groupId>
+			<artifactId>jaxb-runtime</artifactId>
+			<version>2.3.5</version>
+		</dependency>
 	</dependencies>
 
 	<build>
@@ -75,6 +97,10 @@
 			<plugin>
 				<groupId>org.apache.maven.plugins</groupId>
 				<artifactId>maven-compiler-plugin</artifactId>
+				<configuration>
+					<source>17</source> <!-- Versione Java di input -->
+					<target>17</target> <!-- Versione Java di output -->
+				</configuration>
 			</plugin>
 		</plugins>
 	</build>
