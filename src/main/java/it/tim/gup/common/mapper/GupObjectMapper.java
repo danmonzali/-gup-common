@@ -22,7 +22,6 @@ import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.google.json.JsonSanitizer;
 
 import jakarta.xml.bind.JAXBContext;
 import jakarta.xml.bind.JAXBException;
@@ -38,11 +37,10 @@ public class GupObjectMapper {
 
 
 	public String getValueFromJson(String json, String key) throws IOException {
-		String sanitizedJson = JsonSanitizer.sanitize(json);
 		JsonNode nodeValue = null;
 		String value = "";
 		if (json !=null && json.length()!=0) {
-			JsonNode node = mapper.readTree(sanitizedJson);
+			JsonNode node = mapper.readTree(json);
 			if (node.has(key)) {
 				nodeValue = node.get(key);
 				if (nodeValue.isContainerNode()) {
@@ -56,8 +54,7 @@ public class GupObjectMapper {
 	} 
 
 	public String putValueInJson(String json, String key, String value) throws IOException {
-		String sanitizedJson = JsonSanitizer.sanitize(json);
-		JsonNode jsonNode = mapper.readTree(sanitizedJson);
+		JsonNode jsonNode = mapper.readTree(json);
 		if(jsonNode.isObject()) {
 			jsonNode = ((ObjectNode) jsonNode).put(key,value);
 		}
@@ -65,8 +62,7 @@ public class GupObjectMapper {
 
 	} 
 	public String setNodeObjectInJson(String json, String key, String value) throws IOException {
-		String sanitizedJson = JsonSanitizer.sanitize(json);
-		JsonNode jsonNode = mapper.readTree(sanitizedJson);
+		JsonNode jsonNode = mapper.readTree(json);
 		JsonNode jsonValue = mapper.readTree(value);
 
 		if(jsonNode.isObject()) {
@@ -192,9 +188,8 @@ public class GupObjectMapper {
 	}
 
 	public JsonNode readTree(String json) throws IOException {
-		String sanitizedJson = JsonSanitizer.sanitize(json);
 		// TODO Auto-generated method stub
-		return mapper.readTree(sanitizedJson);
+		return mapper.readTree(json);
 	}
 
 

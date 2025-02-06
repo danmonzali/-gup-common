@@ -12,7 +12,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.2.6</version>
+		<version>3.4.2</version>
 	</parent>
 
 	<properties>
@@ -61,23 +61,14 @@
 			<artifactId>jackson-databind</artifactId>
 		</dependency>
 		<dependency>
-			<groupId>com.mikesamuel</groupId>
-			<artifactId>json-sanitizer</artifactId>
-			<version>1.2.0</version>
-		</dependency>
-		<dependency>
 			<groupId>com.fasterxml.jackson.core</groupId>
 			<artifactId>jackson-databind</artifactId>
-			<version>2.15.2</version> <!-- Assicurati che la versione sia
-			compatibile -->
 		</dependency>
 
 		<!-- Jackson DataType JSR310 for Java 8 Time API support -->
 		<dependency>
 			<groupId>com.fasterxml.jackson.datatype</groupId>
 			<artifactId>jackson-datatype-jsr310</artifactId>
-			<version>2.15.2</version> <!-- Assicurati che la versione sia
-			compatibile -->
 		</dependency>
 		<dependency>
 			<groupId>jakarta.xml.bind</groupId>
@@ -88,7 +79,6 @@
 		<dependency>
 			<groupId>org.glassfish.jaxb</groupId>
 			<artifactId>jaxb-runtime</artifactId>
-			<version>2.3.5</version>
 		</dependency>
 	</dependencies>
 
