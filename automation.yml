@@ -1,5 +1,5 @@
 pipeline:
-  flavour: mavenjava-17
+  flavour: mavenjava
   project_manifest_git_ssh_url: 'git@scm.code.telecomitalia.it:gup/gup.meta.git'
   delivery_git_ssh_url: 'git@scm.code.telecomitalia.it:gup/gup-common/delivery.git'
   service_name: gup-common
