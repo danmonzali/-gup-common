@@ -32,22 +32,22 @@ import it.tim.gup.common.exception.GupUnprocessableEntity;
 @Configuration
 public abstract class RestCallService {
 
-	@Value("${https.mutual-auth.keystore.path: /path/keystore}")
+	@Value("${https.mutual-auth.keystore.path:/path/keystore}")
 	private String keystorePath;
 
-	@Value("${https.mutual-auth.keystore.password: keystore_password}")
+	@Value("${https.mutual-auth.keystore.password:keystore_password}")
 	private String keystorePassword;
 
-	@Value("${https.mutual-auth.truststore.path: /path/trustore}")
+	@Value("${https.mutual-auth.truststore.path:/path/trustore}")
 	private String truststorePath;
 
-	@Value("${https.mutual-auth.truststore.password: truststore_password}")
+	@Value("${https.mutual-auth.truststore.password:truststore_password}")
 	private String truststorePassword;
 
-	@Value("${https.truststore.instance: PKCS12}")
+	@Value("${https.truststore.instance:PKCS12}")
 	private String truststoreInstance;
 
-	@Value("${https.keystore.instance: JKS}")
+	@Value("${https.keystore.instance:JKS}")
 	private String keystoreInstance;
 
 	@Autowired
@@ -225,50 +225,7 @@ public abstract class RestCallService {
 		((HttpComponentsClientHttpRequestFactory)rtDefault.getRequestFactory()).setConnectTimeout(timeout);
 		((HttpComponentsClientHttpRequestFactory)rtDefault.getRequestFactory()).setConnectTimeout(timeout);
 		return rt;
-//		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
-//
-//		if (protocol.toUpperCase().equals("HTTPS")) {
-//
-//			CloseableHttpClient httpClient = HttpClients.custom().setSSLHostnameVerifier(new NoopHostnameVerifier()).build();
-//			requestFactory.setHttpClient(httpClient);
-//		
-//			if (mutua) {
-//				try {
-//					// Carica il keystore (certificato client e chiave privata)
-//					KeyStore keyStore = KeyStore.getInstance(truststoreInstance);
-//					keyStore.load(new FileInputStream(new File(keystorePath)), keystorePassword.toCharArray());
-//
-//					// Carica il truststore (certificati server attendibili)
-//					KeyStore trustStore = KeyStore.getInstance(keystoreInstance);
-//					trustStore.load(new FileInputStream(new File(truststorePath)), truststorePassword.toCharArray());
-//
-//					// Configura il contesto SSL con il keystore e il truststore
-//					SSLContext sslContext = SSLContextBuilder.create()
-//							.loadKeyMaterial(keyStore, keystorePassword.toCharArray()) // client cert
-//							.loadTrustMaterial(trustStore, new TrustSelfSignedStrategy()) // server cert
-//							.build();
-//					
-//					   SSLConnectionSocketFactory socketFactory = new SSLConnectionSocketFactory(
-//			                    sslContext, NoopHostnameVerifier.INSTANCE);
-//
-//					   // Crea un HttpClient che utilizza questa socket factory
-//			            CloseableHttpClient httpClientMutua = HttpClients.custom()
-//			                    .setSSLSocketFactory(socketFactory)
-//			                    .build();
-//			            
-//			            
-//					requestFactory.setHttpClient(httpClientMutua);
-//				}catch(Throwable t){					
-//					getLogger().warn("ATTENZIONE non è stato possibile abilitare la mutua: ", t);
-//				}
-//			}
-//		}
-//
-//
-//		timeout = timeout == 0 ? 1 : timeout; 
-//		requestFactory.setConnectTimeout(timeout);
-//		requestFactory.setReadTimeout(timeout);
-//		return new RestTemplate(requestFactory);
+
 	}
 
 	protected abstract void putLogThreadContextDestination();
