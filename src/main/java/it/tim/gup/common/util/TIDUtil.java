@@ -5,7 +5,6 @@ import java.io.Serializable;
 import java.net.InetAddress;
 import java.security.SecureRandom;
 import java.util.Objects;
-import java.util.Random;
 
 /**
  * This class encapsulate a TID.
@@ -120,12 +119,21 @@ public class TIDUtil implements Serializable {
 	 * Check for equality with an Object.
 	 */
 	@Override
-    public boolean equals(Object obj) {
-        if (this == obj) return true;
-        if (obj == null || getClass() != obj.getClass()) return false;
-        TIDUtil tidUtil = (TIDUtil) obj;
-        return Objects.equals(sTID, tidUtil.sTID);
-    }
+	public boolean equals(Object o) {
+		if (this == o) {
+			return true;
+		}
+		if (o == null || getClass() != o.getClass()) {
+			return false;
+		}
+		TIDUtil tidUtil = (TIDUtil) o;
+		return Objects.equals(sTID, tidUtil.sTID);
+	}
+
+	@Override
+	public int hashCode() {
+		return Objects.hash(sTID);  // Dev'essere consistente con equals()
+	}
 	/**
 	 * Convert this TID to a String.
 	 */
@@ -178,7 +186,7 @@ public class TIDUtil implements Serializable {
 		// lo zero.
 		//
 		int rand = secureRandom.nextInt(0xFFFF) + 1;
-		
+
 		// Counter component
 		// 0 is not admitted for the counter (0 is reserved for future uses)
 		//

@@ -96,6 +96,54 @@ public abstract class RestCallService {
 		return authorization;
 	}
 
+	private String generateHMACSignature(String merId, String header) throws GupException {
+		String keyId = System.getenv("NETS_KEYID_" + merId);
+
+		// Se la chiave specifica non è trovata, uso la chiave di default
+		if (keyId == null) {
+			keyId = System.getenv("NETS_KEYID_DEFAULT");
+
+			// Se non c'è nemmeno la chiave di default, lancio un'eccezione
+			if (keyId == null) {
+				getLogger().error("Chiave API non trovata per merId: " + merId + " né chiave di default.");
+				return "";
+			}else {
+				getLogger().warn("Usata chiave di default per merId: " + merId);
+			}
+		}
+
+		try {
+
+			byte[] keyBytes = keyId.getBytes(StandardCharsets.UTF_8);
+
+			// Verifica che la chiave sia della lunghezza corretta, altrimenti fai il padding
+			int hmacBlockSize = 64;  // Blocchi HMAC standard (64 byte per HmacSHA256)
+			if (keyBytes.length > hmacBlockSize) {
+				// Se la chiave è troppo lunga, applica un hash (ad esempio SHA-256) alla chiave
+				keyBytes = java.security.MessageDigest.getInstance("SHA-256").digest(keyBytes);
+			} else if (keyBytes.length < hmacBlockSize) {
+				// Se la chiave è troppo corta, fai un padding con zeri
+				byte[] paddedKey = new byte[hmacBlockSize];
+				System.arraycopy(keyBytes, 0, paddedKey, 0, keyBytes.length);
+				keyBytes = paddedKey;
+			}
+
+			Mac hasher = Mac.getInstance(HMAC_ALGORITHM);
+
+			hasher.init(new SecretKeySpec(keyBytes, HMAC_ALGORITHM));
+			byte[] hash = hasher.doFinal(header.getBytes(StandardCharsets.UTF_8));
+			return Base64.getEncoder().encodeToString(hash);
+
+		} catch (NoSuchAlgorithmException | InvalidKeyException e) {
+			getLogger().error("Errore nella generazione della firma HMAC.");
+			throw new GupException("Errore crittografico.");
+		}
+	}
+
+	private String sanitizeHeaderValue(String value) {
+		return Objects.requireNonNull(value).replaceAll("[\\r\\n]", "").strip();
+	}
+	
 	private String getHttpHeaderAuthorizationWithDigest(String date, String host, String methodPath, String merId,
 			String digest, HttpMethod httpMethod) throws GupException {
 
@@ -114,45 +162,17 @@ public abstract class RestCallService {
 				digest: %s
 				""".formatted(host, date, httpMethod.toString().toLowerCase(), methodPath, digest).strip();
 
-//		String authorization = "Signature keyId=\"" + merId
-//				+ "\",algorithm=\"hmac-sha256\",headers=\"host date (request-target) digest\",signature=\"";
+		//		String authorization = "Signature keyId=\"" + merId
+		//				+ "\",algorithm=\"hmac-sha256\",headers=\"host date (request-target) digest\",signature=\"";
 
-        String keyId = System.getenv("NETS_KEYID_" + merId);
-        
-        // Se la chiave specifica non è trovata, uso la chiave di default
-        if (keyId == null) {
-            keyId = System.getenv("NETS_KEYID_DEFAULT");
+		String signature = generateHMACSignature(merId, header);
 
-            // Se non c'è nemmeno la chiave di default, lancio un'eccezione
-            if (keyId == null) {
-                getLogger().error("Chiave API non trovata per merId: " + merId + " né chiave di default.");
-                return "";
-            }else {
-                getLogger().warn("Usata chiave di default per merId: " + merId);
-            }
-        }
-        
-		try {
-
-			Mac hasher = Mac.getInstance(HMAC_ALGORITHM);
-
-			hasher.init(new SecretKeySpec(keyId.getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM));
-			byte[] hash = hasher.doFinal(header.getBytes(StandardCharsets.UTF_8));
-			String signature = Base64.getEncoder().encodeToString(hash);
-
-			return """
-					Signature keyId="%s",algorithm="hmac-sha256",headers="host date (request-target) digest",signature="%s"
-					""".formatted(merId, signature).strip();
-
-		} catch (NoSuchAlgorithmException | InvalidKeyException e) {
-			getLogger().error("Errore nella generazione della firma HMAC.");
-			throw new GupException("Errore crittografico.");
-		}
+		return """
+				Signature keyId="%s",algorithm="hmac-sha256",headers="host date (request-target) digest",signature="%s"
+				""".formatted(merId, signature).strip();
 	}
 
-	private String sanitizeHeaderValue(String value) {
-		return Objects.requireNonNull(value).replaceAll("[\\r\\n]", "").strip();
-	}
+
 
 	@SuppressWarnings("unused")
 	@Deprecated
@@ -190,50 +210,26 @@ public abstract class RestCallService {
 	}
 
 	public String getHttpHeaderAuthorizationGet(String date, String host, String methodPath, String merId)
-            throws GupException {
-        // Sanitizzazione input per prevenire attacchi di manipolazione
-        host = sanitizeHeaderValue(host);
-        date = sanitizeHeaderValue(date);
-        methodPath = sanitizeHeaderValue(methodPath);
+			throws GupException {
+		// Sanitizzazione input per prevenire attacchi di manipolazione
+		host = sanitizeHeaderValue(host);
+		date = sanitizeHeaderValue(date);
+		methodPath = sanitizeHeaderValue(methodPath);
 
-        // Costruzione header sicura con blocchi di testo
-        String header = """
-                host: %s
-                date: %s
-                (request-target): get %s
-                """.formatted(host, date, methodPath).strip();
+		// Costruzione header sicura con blocchi di testo
+		String header = """
+				host: %s
+				date: %s
+				(request-target): get %s
+				""".formatted(host, date, methodPath).strip();
 
-        // Recupero chiave in modo sicuro
-        String keyId = System.getenv("NETS_KEYID_" + merId);
-        
-        // Se la chiave specifica non è trovata, uso la chiave di default
-        if (keyId == null) {
-            keyId = System.getenv("NETS_KEYID_DEFAULT");
-            // Se non c'è nemmeno la chiave di default, lancio un'eccezione
-            if (keyId == null) {
-                getLogger().error("Chiave API non trovata per merId: " + merId + " né chiave di default.");
-                return "";
-            }else {
-            	// Log di sicurezza (senza esporre il valore della chiave)
-                getLogger().warn("Usata chiave di default per merId: " + merId);
-            }     
-        }
+		String signature = generateHMACSignature(merId, header);
 
-        // Generazione firma HMAC
-        try {
-            Mac hasher = Mac.getInstance(HMAC_ALGORITHM);
-            hasher.init(new SecretKeySpec(keyId.getBytes(StandardCharsets.UTF_8), HMAC_ALGORITHM));
-            byte[] hash = hasher.doFinal(header.getBytes(StandardCharsets.UTF_8));
-            String signature = Base64.getEncoder().encodeToString(hash);
+		return """
+				Signature keyId="%s",algorithm="hmac-sha256",headers="host date (request-target)",signature="%s"
+				""".formatted(merId, signature).strip();
 
-            return """
-                    Signature keyId="%s",algorithm="hmac-sha256",headers="host date (request-target)",signature="%s"
-                    """.formatted(merId, signature).strip();
-        } catch (NoSuchAlgorithmException | InvalidKeyException e) {
-            getLogger().error("Errore nella generazione della firma HMAC.");
-            throw new GupException("Errore crittografico.");
-        }
-    }
+	}
 
 
 	public String getHttpHeaderDigest(String body) throws GupException {
