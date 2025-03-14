@@ -180,33 +180,13 @@ public abstract class RestCallService {
 			String digest) throws GupException {
 		String header = "host: " + host + "\ndate: " + date + "\n(request-target): post " + methodPath + "\ndigest: "
 				+ digest;
-		String authorization = "Signature keyId=\"" + merId
-				+ "\",algorithm=\"hmac-sha256\",headers=\"host date (request-target) digest\",signature=\"";
+	
+		String signature = generateHMACSignature(merId, header);
 
-		String keyId = System.getenv("NETS_KEYID_" + merId);
-		if (keyId == null) {
-			getLogger().error("getHttpHeaderAuthorizationPost - ERRORE: variabile d'ambiente \"NETS_KEYID_" + merId
-					+ "\" non trovata!");
-			throw new GupUnprocessableEntity("Mer Id " + merId + " non configurato");
-		}
+		return """
+				Signature keyId="%s",algorithm="hmac-sha256",headers="host date (request-target)",signature="%s"
+				""".formatted(merId, signature).strip();
 
-		Mac hasher = null;
-		try {
-			hasher = Mac.getInstance("HmacSHA256");
-			hasher.init(new SecretKeySpec(keyId.getBytes(), "HmacSHA256"));
-		} catch (NoSuchAlgorithmException e) {
-			getLogger().error("getHttpHeaderAuthorizationPost - errore NoSuchAlgorithmException"
-					+ e.getMessage().replaceAll("[\n\r]", ""));
-			throw new GupException("ERRORE: NoSuchAlgorithmException");
-		} catch (InvalidKeyException e) {
-			getLogger().error("getHttpHeaderAuthorizationPost - errore InvalidKeyException"
-					+ e.getMessage().replaceAll("[\n\r]", ""));
-			throw new GupException("ERRORE: InvalidKeyException");
-		}
-
-		byte[] hash = hasher.doFinal(header.getBytes());
-		authorization += Base64.getEncoder().encodeToString(hash) + "\"";
-		return authorization;
 	}
 
 	public String getHttpHeaderAuthorizationGet(String date, String host, String methodPath, String merId)
