@@ -6,24 +6,22 @@ import java.util.Date;
 
 import org.apache.logging.log4j.Logger;
 import org.apache.logging.log4j.ThreadContext;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
+import org.springframework.web.bind.annotation.GetMapping;
 
 import com.sun.management.OperatingSystemMXBean;
 
 
-@SuppressWarnings("restriction")
 public abstract class GupController {
 	
-	@RequestMapping(value = "/probe", method = RequestMethod.GET)
+	@GetMapping(value = "/probe")
 	public void probe() {
 		ThreadContext.put("gupDestination", "DIAGNOSTIC");
 		OperatingSystemMXBean bean = (com.sun.management.OperatingSystemMXBean) ManagementFactory.getOperatingSystemMXBean();
-		getLogger().info("Servizio probe invocato. " + "Used Memory  : " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) + " bytes  " + "Free Memory  : " + Runtime.getRuntime().freeMemory() + " bytes  " + "Total Memory : " + Runtime.getRuntime().totalMemory() + " bytes  " + "Max Memory : " + Runtime.getRuntime().maxMemory() + " bytes  " + "System CPU Load : " + bean.getSystemCpuLoad() + " Proccess CPU Load :" + bean.getProcessCpuLoad());
+		getLogger().info("Servizio probe invocato. " + "Used Memory  : " + (Runtime.getRuntime().totalMemory() - Runtime.getRuntime().freeMemory()) + " bytes  " + "Free Memory  : " + Runtime.getRuntime().freeMemory() + " bytes  " + "Total Memory : " + Runtime.getRuntime().totalMemory() + " bytes  " + "Max Memory : " + Runtime.getRuntime().maxMemory() + " bytes  " + "System CPU Load : " + bean.getProcessCpuLoad() + " Proccess CPU Load :" + bean.getProcessCpuLoad());
 		ThreadContext.remove("gupDestination");
 	}
 	
-	@RequestMapping(value = "/getLocalTime", method = RequestMethod.GET)
+	@GetMapping(value = "/getLocalTime")
 	public String getLocalTime() {
 		String localTime = new Timestamp(new Date().getTime()).toString();
 		return localTime;

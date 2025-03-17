@@ -6,7 +6,7 @@
 
 	<groupId>it.tim.gup</groupId>
         <artifactId>gup-common-21</artifactId>
-	<version>21.0.1</version>
+	<version>21.0.2</version>
 	<packaging>jar</packaging>
 
 	<parent>
