@@ -5,17 +5,15 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.security.KeyStore;
 
+import javax.net.ssl.HostnameVerifier;
 import javax.net.ssl.SSLContext;
 
 import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
-import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
 import org.apache.hc.client5.http.impl.classic.HttpClients;
-import org.apache.hc.client5.http.impl.io.BasicHttpClientConnectionManager;
-import org.apache.hc.client5.http.socket.ConnectionSocketFactory;
-import org.apache.hc.client5.http.socket.PlainConnectionSocketFactory;
+import org.apache.hc.client5.http.impl.io.PoolingHttpClientConnectionManagerBuilder;
+import org.apache.hc.client5.http.ssl.DefaultClientTlsStrategy;
 import org.apache.hc.client5.http.ssl.NoopHostnameVerifier;
-import org.apache.hc.client5.http.ssl.SSLConnectionSocketFactory;
-import org.apache.hc.client5.http.ssl.TrustSelfSignedStrategy;
+import org.apache.hc.client5.http.ssl.TlsSocketStrategy;
 import org.apache.hc.core5.http.config.Registry;
 import org.apache.hc.core5.http.config.RegistryBuilder;
 import org.apache.hc.core5.ssl.SSLContextBuilder;
@@ -105,28 +103,29 @@ public class RestTemplateAspectMutua {
 		//		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
 
 		try {
-		SSLContext sslContext = SSLContextBuilder.create().build();
-		SSLConnectionSocketFactory sslsf = 
-		        new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
-		
-		
-		Registry<ConnectionSocketFactory> socketFactoryRegistry = 
-		        RegistryBuilder.<ConnectionSocketFactory> create()
-		        .register("https", sslsf)
-		        .register("http", new PlainConnectionSocketFactory())
-		        .build();
-		
-		BasicHttpClientConnectionManager connectionManager =
-		        new BasicHttpClientConnectionManager(socketFactoryRegistry);
-		
-		CloseableHttpClient httpClient = HttpClients.custom()
-		        .setConnectionManager(connectionManager)
-		        .build();
+			SSLContext sslContext = SSLContextBuilder.create().build();
+
+			HostnameVerifier host = new NoopHostnameVerifier();
+
+			DefaultClientTlsStrategy tlsStrategy = new DefaultClientTlsStrategy(sslContext, host);
+
+			Registry<TlsSocketStrategy> socketFactoryRegistry = RegistryBuilder.<TlsSocketStrategy>create()
+					.register("https", tlsStrategy) // Gestisce connessioni HTTPS
+					.build();
+
+			var connManager = PoolingHttpClientConnectionManagerBuilder.create()
+					.setTlsSocketStrategy(socketFactoryRegistry.lookup("https"))
+					.build();
 
 
-		requestFactory.setHttpClient(httpClient);
+			CloseableHttpClient httpClient = HttpClients.custom()
+					.setConnectionManager(connManager)
+					.build();
 
-	    } catch (Throwable t) {
+
+			requestFactory.setHttpClient(httpClient);
+
+		} catch (Throwable t) {
 			logger.warn("ATTENZIONE qualcosa è andato storto: ", t);
 		}
 
@@ -137,40 +136,37 @@ public class RestTemplateAspectMutua {
 
 		//		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
 		try {
-			// Carica il keystore (certificato client e chiave privata)
+
 			KeyStore keyStore = KeyStore.getInstance(keystoreInstance);
-			keyStore.load(new FileInputStream(new File(keystorePath)), keystorePassword.toCharArray());
+			try (var keyStoreStream = new FileInputStream(new File(keystorePath))) {
+				keyStore.load(keyStoreStream, keystorePassword.toCharArray());
+			}
 
-			// Carica il truststore (certificati server attendibili)
+			// 🔹 2. Caricare il Truststore (verifica il server)
 			KeyStore trustStore = KeyStore.getInstance(truststoreInstance);
-			trustStore.load(new FileInputStream(new File(truststorePath)), truststorePassword.toCharArray());
+			try (var trustStoreStream = new FileInputStream(new File(truststorePath))) {
+				trustStore.load(trustStoreStream, truststorePassword.toCharArray());
+			}
 
-			// Configura il contesto SSL con il keystore e il truststore
-			SSLContext sslContext = SSLContextBuilder.create().loadKeyMaterial(keyStore, keystorePassword.toCharArray()) // client
-					// cert
-					.loadTrustMaterial(trustStore, new TrustSelfSignedStrategy()) // server cert
+			// 🔹 3. Creare SSLContext con Keystore e Truststore
+			SSLContext sslContext = SSLContextBuilder.create()
+					.loadKeyMaterial(keyStore, keystorePassword.toCharArray()) // Certificato client
+					.loadTrustMaterial(trustStore, null) // Certificati attendibili
 					.build();
 
-			
-			SSLConnectionSocketFactory sslsf = 
-			        new SSLConnectionSocketFactory(sslContext, NoopHostnameVerifier.INSTANCE);
-			
-			
-			Registry<ConnectionSocketFactory> socketFactoryRegistry = 
-			        RegistryBuilder.<ConnectionSocketFactory> create()
-			        .register("https", sslsf)
-			        .register("http", new PlainConnectionSocketFactory())
-			        .build();
-			
-			BasicHttpClientConnectionManager connectionManager =
-			        new BasicHttpClientConnectionManager(socketFactoryRegistry);
+			// 🔹 4. Creare il TLS Strategy con SSLContext personalizzato
+			DefaultClientTlsStrategy tlsStrategy = new DefaultClientTlsStrategy(sslContext);
 
-			
-			
+			// 🔹 5. Creare il Connection Manager (gestisce HTTP e HTTPS con mTLS)
+			var connManager = PoolingHttpClientConnectionManagerBuilder.create()
+					.setTlsSocketStrategy(tlsStrategy)
+					.build();
+
+			// 🔹 6. Creare HttpClient con il Connection Manager
 			CloseableHttpClient httpClient = HttpClients.custom()
-			        .setConnectionManager(connectionManager)
-			        .build();
-			
+					.setConnectionManager(connManager)
+					.build();
+
 			requestFactory.setHttpClient(httpClient);
 
 			return requestFactory;

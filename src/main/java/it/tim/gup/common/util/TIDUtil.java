@@ -3,7 +3,8 @@ package it.tim.gup.common.util;
 import java.io.IOException;
 import java.io.Serializable;
 import java.net.InetAddress;
-import java.util.Random;
+import java.security.SecureRandom;
+import java.util.Objects;
 
 /**
  * This class encapsulate a TID.
@@ -117,32 +118,22 @@ public class TIDUtil implements Serializable {
 	/**
 	 * Check for equality with an Object.
 	 */
-	public boolean equals(Object tid) {
-		if (tid == null) {
-			return false;
-		}
-		if (tid == this) {
+	@Override
+	public boolean equals(Object o) {
+		if (this == o) {
 			return true;
 		}
-		if (tid instanceof TIDUtil) {
-			return sTID.equals(((TIDUtil) tid).sTID);
-		}
-		return false;
-	}
-
-	/**
-	 * Check for equality with a TID.
-	 */
-	public boolean equals(TIDUtil tid) {
-		if (tid == null) {
+		if (o == null || getClass() != o.getClass()) {
 			return false;
 		}
-		if (tid == this) {
-			return true;
-		}
-		return sTID.equals(tid.sTID);
+		TIDUtil tidUtil = (TIDUtil) o;
+		return Objects.equals(sTID, tidUtil.sTID);
 	}
 
+	@Override
+	public int hashCode() {
+		return Objects.hash(sTID);  // Dev'essere consistente con equals()
+	}
 	/**
 	 * Convert this TID to a String.
 	 */
@@ -162,7 +153,7 @@ public class TIDUtil implements Serializable {
 	/**
 	 * Used to calculate random component.
 	 */
-	transient private static Random random = new Random();
+	transient private static SecureRandom secureRandom = new SecureRandom();
 
 	/**
 	 * Contains the IP component. Calculate only once.
@@ -194,7 +185,7 @@ public class TIDUtil implements Serializable {
 		// La formula seguente calcola un numero casuale su 16 bit, escludendo
 		// lo zero.
 		//
-		int rand = random.nextInt(0xFFFF) + 1;
+		int rand = secureRandom.nextInt(0xFFFF) + 1;
 
 		// Counter component
 		// 0 is not admitted for the counter (0 is reserved for future uses)
@@ -246,9 +237,7 @@ public class TIDUtil implements Serializable {
 					}
 				}
 			}
-		} catch (IOException exc) {
-			exc.printStackTrace();
-		}
+		} catch (IOException exc) {}
 	}
 
 	/**

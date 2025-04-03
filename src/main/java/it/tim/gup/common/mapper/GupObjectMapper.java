@@ -4,8 +4,10 @@ import java.io.IOException;
 import java.io.StringReader;
 import java.io.StringWriter;
 import java.math.BigInteger;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HexFormat;
 
 import javax.xml.stream.XMLInputFactory;
 import javax.xml.stream.XMLStreamException;
@@ -169,6 +171,12 @@ public class GupObjectMapper {
 		return value;
 	}
 	
+	   /**
+     * ❌ Metodo deprecato: MD5 è insicuro e vulnerabile agli attacchi.
+     * ⚠️ Non usare questo metodo per sicurezza o hashing di password!
+     * 🛑 Usa invece createSHA256FromString() o algoritmi più sicuri (es. bcrypt).
+     */
+    @Deprecated(since = "2.0", forRemoval = true)
 	public String create_md5_from_String(String string_to_md5) throws NoSuchAlgorithmException {
 		String string_hash = "";
 		MessageDigest md;
@@ -176,6 +184,16 @@ public class GupObjectMapper {
 		byte[] string_byte = md.digest(string_to_md5.getBytes());
 		string_hash = String.format("%1$032X", new BigInteger(1, string_byte));
 		return string_hash;
+	}
+	
+    /**
+     * ✅ Metodo sicuro con SHA-256.
+     * ⚠️ Se devi proteggere password, usa bcrypt o Argon2 invece di SHA-256.
+     */
+	public static String createSHA256FromString(String input) throws NoSuchAlgorithmException {
+	        MessageDigest md = MessageDigest.getInstance("SHA-256");
+	        byte[] hashBytes = md.digest(input.getBytes(StandardCharsets.UTF_8));
+	        return HexFormat.of().formatHex(hashBytes);
 	}
 
 	public ObjectMapper getMapper() {
