@@ -15,20 +15,22 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
 import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletRequestWrapper;
 import jakarta.servlet.http.HttpServletResponse;
 
 public abstract class GupFilter implements Filter {
 
 	private static final Logger logger = LogManager.getLogger(GupFilter.class);
-	
+
 	@Override
 	public void destroy() {
 	}
 
 	@Override
-	public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain) throws IOException, ServletException {
+	public void doFilter(ServletRequest request, ServletResponse response, FilterChain filterChain)
+			throws IOException, ServletException {
 		try {
-			
+
 			HttpServletResponse httpServletResponse = (HttpServletResponse) response;
 			HttpServletRequest httpServletRequest = (HttpServletRequest) request;
 			httpServletResponse.addHeader("apigwRequestId", httpServletRequest.getHeader("APIGW_requestID"));
@@ -38,13 +40,30 @@ public abstract class GupFilter implements Filter {
 			ThreadContext.put("gupId", httpServletRequest.getHeader("businessID"));
 			ThreadContext.put("gupApplicationComponent", getGupApplicationComponent());
 			ThreadContext.put("gupEventType", getGupEventType());
-			
+
 			String tid = new TIDUtil().toString();
 			GupContext.setTID(tid);
 			ThreadContext.put("gupTid", tid);
-			
+
+			String uri = httpServletRequest.getRequestURI();
+			if (uri.length() > 1 && uri.endsWith("/")) {
+				String newUri = uri.substring(0, uri.length() - 1);
+				HttpServletRequest wrapped = new HttpServletRequestWrapper(httpServletRequest) {
+					@Override
+					public String getRequestURI() {
+						return newUri;
+					}
+
+					@Override
+					public String getServletPath() {
+						return newUri;
+					}
+				};
+				filterChain.doFilter(wrapped, response);
+				return;
+			}
 			filterChain.doFilter(request, response);
-			
+
 		} catch (Throwable e) {
 			logger.error("doFilter - ERRORE ", e);
 			throw e;
@@ -52,11 +71,11 @@ public abstract class GupFilter implements Filter {
 			ThreadContext.clearAll();
 		}
 	}
-	
+
 	public abstract String getGupApplicationComponent();
-	
+
 	public abstract String getGupEventType();
-	
+
 	@Override
 	public void init(FilterConfig filterConfig) throws ServletException {
 	}
