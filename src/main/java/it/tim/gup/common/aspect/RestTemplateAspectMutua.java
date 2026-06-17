@@ -1,6 +1,5 @@
 package it.tim.gup.common.aspect;
 
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.security.KeyStore;
@@ -26,10 +25,12 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.ApplicationContext;
 import org.springframework.core.annotation.Order;
+import org.springframework.http.HttpEntity;
+import org.springframework.http.HttpMethod;
+import org.springframework.http.ResponseEntity;
 import org.springframework.http.client.HttpComponentsClientHttpRequestFactory;
 import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
-
 
 @Aspect
 @Component
@@ -62,45 +63,64 @@ public class RestTemplateAspectMutua {
 
 	private static final Logger logger = LogManager.getLogger(RestTemplateAspectMutua.class);
 
-
 	@Around("execution(* org.springframework.web.client.RestTemplate.exchange(..))")
 	public Object aroundExchange(ProceedingJoinPoint joinPoint) throws Throwable {
 		// Prima di chiamare il metodo exchange
+		long startTime = System.currentTimeMillis();
 		boolean makeMutua = false;
-		String url = (String) joinPoint.getArgs()[0];
+		Object[] args = joinPoint.getArgs();
 
-		HttpComponentsClientHttpRequestFactory requestFactory  = ((HttpComponentsClientHttpRequestFactory)((RestTemplate) joinPoint.getThis()).getRequestFactory());
+		String url = String.valueOf(args[0]);
+		HttpMethod method = args.length > 1 && args[1] instanceof HttpMethod ? (HttpMethod) args[1] : null;
+		Object requestBody = null;
 
-		if (beanMutua.getUrl()!=null) {
+		if (args.length > 2 && args[2] instanceof HttpEntity<?> httpEntity) {
+			requestBody = httpEntity.getBody();
+		}
+
+		HttpComponentsClientHttpRequestFactory requestFactory = ((HttpComponentsClientHttpRequestFactory) ((RestTemplate) joinPoint
+				.getThis()).getRequestFactory());
+
+		if (beanMutua.getUrl() != null) {
 			for (int i = 0; i < beanMutua.getUrl().length; i++) {
 				String s = beanMutua.getUrl()[i];
 				if (url.contains(s) && beanMutua.getAccept()[i] == true) {
 					makeMutua = true;
-					((RestTemplate) joinPoint.getThis()).setRequestFactory(makeCallMutua(requestFactory));
+
 					break;
 				}
 			}
 		}
 		if (!makeMutua && url.toUpperCase().startsWith("HTTPS")) {
-			((RestTemplate) joinPoint.getThis()).setRequestFactory(makeCallNonMutua(requestFactory,url));
-		} else if(!makeMutua){
+			((RestTemplate) joinPoint.getThis()).setRequestFactory(makeCallNonMutua(requestFactory, url));
+		} else if (!makeMutua) {
 			RestTemplate rtDefault = (RestTemplate) applicationContext.getBean("restTemplateDefault");
 			((RestTemplate) joinPoint.getThis()).setRequestFactory(rtDefault.getRequestFactory());
+		} else {
+			((RestTemplate) joinPoint.getThis()).setRequestFactory(makeCallMutua(requestFactory));
 		}
 		// Esegui il metodo exchange()
 		Object result = joinPoint.proceed();
+		long duration = System.currentTimeMillis() - startTime;
 
-		//		// Dopo la chiamata exchange
-		//		if (result instanceof ResponseEntity) {
-		//			ResponseEntity<?> response = (ResponseEntity<?>) result;
-		//			System.out.println("Risposta ricevuta: " + response.getStatusCode());
-		//		}
+		Object responseBody = null;
+		Integer status = null;
+
+		if (result instanceof ResponseEntity<?> responseEntity) {
+			responseBody = responseEntity.getBody();
+			status = responseEntity.getStatusCode().value();
+		}
+
+		logger.info("HTTP_CALL method={} url={} status={} timeMs={} req={} res={}", method, url, status, duration,
+				requestBody, responseBody);
 
 		return result;
 	}
 
-	public HttpComponentsClientHttpRequestFactory makeCallNonMutua(HttpComponentsClientHttpRequestFactory requestFactory,String url) {
-		//		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
+	public HttpComponentsClientHttpRequestFactory makeCallNonMutua(
+			HttpComponentsClientHttpRequestFactory requestFactory, String url) {
+		// HttpComponentsClientHttpRequestFactory requestFactory = new
+		// HttpComponentsClientHttpRequestFactory();
 
 		try {
 			SSLContext sslContext = SSLContextBuilder.create().build();
@@ -114,14 +134,9 @@ public class RestTemplateAspectMutua {
 					.build();
 
 			var connManager = PoolingHttpClientConnectionManagerBuilder.create()
-					.setTlsSocketStrategy(socketFactoryRegistry.lookup("https"))
-					.build();
+					.setTlsSocketStrategy(socketFactoryRegistry.lookup("https")).build();
 
-
-			CloseableHttpClient httpClient = HttpClients.custom()
-					.setConnectionManager(connManager)
-					.build();
-
+			CloseableHttpClient httpClient = HttpClients.custom().setConnectionManager(connManager).build();
 
 			requestFactory.setHttpClient(httpClient);
 
@@ -134,7 +149,8 @@ public class RestTemplateAspectMutua {
 
 	public HttpComponentsClientHttpRequestFactory makeCallMutua(HttpComponentsClientHttpRequestFactory requestFactory) {
 
-		//		HttpComponentsClientHttpRequestFactory requestFactory = new HttpComponentsClientHttpRequestFactory();
+		// HttpComponentsClientHttpRequestFactory requestFactory = new
+		// HttpComponentsClientHttpRequestFactory();
 		try {
 
 			KeyStore keyStore = KeyStore.getInstance(keystoreInstance);
@@ -149,8 +165,8 @@ public class RestTemplateAspectMutua {
 			}
 
 			// 🔹 3. Creare SSLContext con Keystore e Truststore
-			SSLContext sslContext = SSLContextBuilder.create()
-					.loadKeyMaterial(keyStore, keystorePassword.toCharArray()) // Certificato client
+			SSLContext sslContext = SSLContextBuilder.create().loadKeyMaterial(keyStore, keystorePassword.toCharArray()) // Certificato
+																															// client
 					.loadTrustMaterial(trustStore, null) // Certificati attendibili
 					.build();
 
@@ -158,14 +174,11 @@ public class RestTemplateAspectMutua {
 			DefaultClientTlsStrategy tlsStrategy = new DefaultClientTlsStrategy(sslContext);
 
 			// 🔹 5. Creare il Connection Manager (gestisce HTTP e HTTPS con mTLS)
-			var connManager = PoolingHttpClientConnectionManagerBuilder.create()
-					.setTlsSocketStrategy(tlsStrategy)
+			var connManager = PoolingHttpClientConnectionManagerBuilder.create().setTlsSocketStrategy(tlsStrategy)
 					.build();
 
 			// 🔹 6. Creare HttpClient con il Connection Manager
-			CloseableHttpClient httpClient = HttpClients.custom()
-					.setConnectionManager(connManager)
-					.build();
+			CloseableHttpClient httpClient = HttpClients.custom().setConnectionManager(connManager).build();
 
 			requestFactory.setHttpClient(httpClient);
 
